@@ -1,0 +1,46 @@
+{
+  "SDKVersion": 2,
+  "Author": "Landie",
+  "CodePath": "main.exe",
+  "Description": "Enables bi-directional communication with SAMMI",
+  "Name": "SAMMI",
+  "Icon": "img/main",
+  "URL": "https://sammi.solutions",
+  "Version": "1.0.0",
+  "Software": {
+    "MinimumVersion": "5.0"
+  },
+  "OS": [
+    {
+      "Platform": "windows",
+      "MinimumVersion": "10"
+    }
+  ],
+  "Category": "SAMMI",
+  "CategoryIcon": "img/cat",
+  "Actions": [
+    {
+      "Icon": "img/main",
+      "Name": "Action",
+      "Controllers": ["Keypad", "Encoder"],
+      "Encoder": {
+        "layout": "$B1",
+        "TriggerDescription": {
+          "Rotate": "Describe the rotation",
+          "Push": "Describe the encoder push",
+          "Touch": "Describe the touch",
+          "LongTouch": "Describe the long touch"
+        }
+      },
+      "States": [
+        {
+          "Image": "img/main"
+        }
+      ],
+      "Tooltip": "A bi-directional action for SAMMI",
+      "UUID": "solutions.sammi.sdPlugin.action",
+      "PropertyInspectorPath": "pi/inspector.html",
+      "UserTitleEnabled": false
+    }
+  ]
+}
