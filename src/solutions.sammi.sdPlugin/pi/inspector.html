@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta
+          name="viewport"
+          content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <title>com.elgato.template Property Inspector</title>
+    <link rel="stylesheet" href="../libs/css/sdpi.css" />
+</head>
+
+<body>
+    <div class="sdpi-wrapper">
+        
+        <form id="property-inspector">
+            <div class="sdpi-item">
+                <div data-localize class="sdpi-item-label" title="ID of this streamdeck action.">Action ID</div>
+                <input data-localize class="sdpi-item-value" name="actionId" type="text" value="" placeholder="Please set, or generate an Action ID" />
+            </div>
+            <div class="sdpi-item">
+                <div data-localize class="sdpi-item-label" title="Title of this streamdeck action. Displays on the action itself!">Title</div>
+                <input data-localize class="sdpi-item-value" name="title" type="text" value="" placeholder="Enter some text here..." />
+            </div>
+        </form>
+        <!-- <div class="sdpi-item">
+            <div class="sdpi-item-label" data-localize title="My button">Button</div>
+            <button
+                    class="sdpi-item-value"
+                    value="Click Me"
+                    data-localize
+                    id="open-external">
+                Click Me
+            </button>
+        </div> -->
+    </div>
+
+    <div class="sdpi-info-label hidden" style="top: -1000" value=""></div>
+
+    <!-- Stream Deck Libs -->
+    <script src="../libs/js/constants.js"></script>
+    <script src="../libs/js/prototypes.js"></script>
+    <script src="../libs/js/timers.js"></script>
+    <script src="../libs/js/utils.js"></script>
+    <script src="../libs/js/events.js"></script>
+    <script src="../libs/js/api.js"></script>
+    <script src="../libs/js/property-inspector.js"></script>
+    <script src="../libs/js/dynamic-styles.js"></script>
+
+    <!-- Property Inspector Source -->
+    <script src="inspector.js"></script>
+</body>
+
+</html>

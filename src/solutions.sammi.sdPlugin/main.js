@@ -131,6 +131,20 @@ function registerElgatoPlugin() {
   wsElgato.send(JSON.stringify(json));
 }
 
+function setTitle(context, title) { //TODO finish me plz
+  try {
+    const json = {
+      event: "openUrl",
+      payload: {
+        url: "https://landie.land",
+      },
+    };
+    wsElgato.send(JSON.stringify(json));
+  } catch (e) {
+    logger(e);
+  }
+}
+
 function openURL() {
   try {
     const json = {
