@@ -24,6 +24,27 @@ let server = null;
 let wss = null;
 let ws = null;
 let wsElgato = null;
+let debug = true; //shows logging
+// let collection = {
+//   device_27EFDAA54970B08A70ABE5F877AF0961: {
+//     actions: {
+//       ctx_83f85e559e1f9551221e8a2d813e7b1e: {
+//         title: "this is a title",
+//         img: "https://landie.land/pfp.png"
+//       },
+//       ctx_00c3b449d095f03b08c05fdded800943: {
+//         title: "this is another title",
+//         img: "https://landie.land/ref.png"
+//       },
+//     },
+//   },
+// };
+
+let collection = {};
+let collectionQueue = {
+  //id_wudgawd0819d: {title: 'cool title', actionId: "wudgawd0819d"}
+};
+
 const RELAY_PORT = 9880;
 
 //connect to generated elgato port over here!
@@ -42,7 +63,7 @@ wsElgato.on("message", function incoming(data) {
   typeof data;
   logger("incoming: " + data);
   // fs.appendFileSync("output.txt", data, "utf-8");
-  parseElgatoEvent(data);
+  parseEvent(data, "Elgato");
 });
 
 wsElgato.on("close", function close() {
@@ -62,8 +83,18 @@ function createRelayServer() {
   }
 
   wss.on("connection", (ws, req) => {
+    const fetchSource = url => {
+      if (url === "/pi") return "PI";
+      if (url === "/sammi-bridge") return "SAMMI";
+      logger("unknown source url: " + url);
+      return null;
+    };
+
     ws.on("message", msg => {
-      logger(msg);
+      //* this is when a connected client (such as PI or SAMMI) sends something to the plugin server
+      let source = fetchSource(req.url);
+      if (source === null) return;
+      parseEvent(msg, source);
     });
     ws.on("close", (ws, req) => {
       logger("closed " + ws);
@@ -80,19 +111,42 @@ function createRelayServer() {
 }
 
 function sendToSAMMI(payload) {
+  logger("sending a payload to sammi. here: " + JSON.stringify(payload));
+  if (payload.event === "error") {
+    showAlert(payload.context);
+  }
   wss.clients.forEach(client => {
     client.send(JSON.stringify(payload));
   });
 }
 
-function parseElgatoEvent(e) {
+function parseEvent(e, source) {
   const data = JSON.parse(e);
+  logger("event: " + data.event);
+  logger("source: " + source);
   switch (data.event) {
+    case "deviceDidConnect":
+      logger("a device connected");
+      collectionNewDevice(data.device, data.deviceInfo);
+      break;
+    case "SAMMIUpdateAction":
+      logger("event from SAMMI, update action!");
+      SAMMIUpdateAction(data.actionId, data.payload);
+      break;
+    case "setTitle":
+      logger("trying to set title!");
+      setTitle(data.device, data.context, data.title, true);
+      break;
+    case "sendToPlugin": //from PI to plugin
+      logger("custom event from PI");
+      parsePiEvent(data.payload.event, data.payload);
+      break;
     case "keyDown": //press
       if (!data.payload.settings.actionId) {
         sendToSAMMI({
           event: "error",
           msg: "An action was pressed, but contains no Action ID.",
+          context: data.context,
         });
         return;
       }
@@ -106,6 +160,7 @@ function parseElgatoEvent(e) {
         sendToSAMMI({
           event: "error",
           msg: "An action was released, but contains no Action ID.",
+          context: data.context,
         });
         return;
       }
@@ -114,49 +169,216 @@ function parseElgatoEvent(e) {
         actionId: data.payload.settings.actionId,
       });
       break;
-
     case "willAppear": // action visible
-    // if (!data.settings.actionId) break;
+      // const collectionActionSettings =
+      //   collection[`device_${data.device}`].actions[`ctx_${data.context}`];
+      logger("an action appeared! do some stuff");
+      if (Object.keys(data.payload.settings).length === 0) {
+        logger("this was a freshly created action, do nothing yet");
+        return;
+      }
+      // collectionUpdateDeviceAction(
+      //   data.device,
+      //   data.context,
+      //   data.payload.settings,
+
+      // );
+      //check queue for matching id
+
+      // if (typeof collectionQueue[`id_${data.payload.settings?.actionId}`] === 'object') {
+      //   const queuedPayload = collectionQueue[`id_${data.payload.settings.actionId}`]
+      //   collectionUpdateDeviceAction(data.device, data.context, queuedPayload)
+      //   delete collectionQueue[`id_${data.payload.settings.actionId}`]
+      // } else {
+      // }
+
+      //always update
+      collectionUpdateDeviceAction(data.device, data.context, {
+        actionId: data.payload.settings.actionId,
+      });
+
+      if (
+        !collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+          ?.title
+      ) {
+        setTitle(data.device, data.context, data.payload.settings.title, true);
+      } else {
+        setTitle(
+          data.device,
+          data.context,
+          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+            .title,
+          false
+        );
+      }
+
+      break;
     default:
       break;
   }
 }
 
-function registerElgatoPlugin() {
-  const json = {
-    event: elgatoData.registerEvent,
-    uuid: elgatoData.pluginUUID,
-  };
+function parsePiEvent(piEvent, data) {
+  switch (piEvent) {
+    case "freshActionId":
+      logger("oh, fresh ID! " + data.actionId);
+      collectionUpdateDeviceAction(data.device, data.context, {
+        actionId: data.actionId,
+      });
+      break;
 
-  wsElgato.send(JSON.stringify(json));
+    default:
+      break;
+  }
 }
 
-function setTitle(context, title) { //TODO finish me plz
-  try {
-    const json = {
-      event: "openUrl",
-      payload: {
-        url: "https://landie.land",
-      },
+function SAMMIUpdateAction(actionId, sammiPayload) {
+  const actionInfo = fetchActionInfoFromActionId(actionId);
+  if (actionInfo === null) {
+    logger(
+      "WARN: SAMMI Update Action failed because it could not find actionInfo from actionID " +
+        actionId
+    );
+    logger("WARN: Queueing actionID");
+    collectionQueue[`id_${actionId}`] = sammiPayload;
+    collectionQueue[`id_${actionId}`].actionId = actionId;
+    logger("echoed queue: " + JSON.stringify(collectionQueue));
+    return;
+  }
+  const collectionActionSettings =
+    collection[`device_${actionInfo.device}`].actions[
+      `ctx_${actionInfo.context}`
+    ];
+
+  if (sammiPayload.title !== null) {
+    if (actionInfo !== null) {
+      setTitle(actionInfo.device, actionInfo.context, sammiPayload.title, true);
+    } else {
+      collectionQueue[`id_${actionId}`].title = sammiPayload.title;
+    }
+  }
+  if (sammiPayload.icon !== null) {
+    //TODO setIcon()
+  }
+}
+
+function registerElgatoPlugin() {
+  sendToElgatoWs({
+    event: elgatoData.registerEvent,
+    uuid: elgatoData.pluginUUID,
+  });
+}
+
+function fetchActionInfoFromActionId(actionId) {
+  for (let deviceKey in collection) {
+    let actions = collection[deviceKey].actions;
+    for (let contextKey in actions) {
+      if (actions[contextKey].actionId === actionId) {
+        return {
+          device: deviceKey.replace("device_", ""),
+          context: contextKey.replace("ctx_", ""),
+        };
+      }
+    }
+  }
+  return null;
+}
+
+function collectionUpdateDeviceAction(device, ctx, actionSettings) {
+  if (!device || !ctx) {
+    logger("ERR: no device or info was provided, exiting");
+    return;
+  }
+  logger(
+    `collectionUpdateDeviceAction recieved parameters: ${device}, ${ctx}, ${actionSettings}`
+  );
+
+  if (
+    typeof collection[`device_${device}`].actions[`ctx_${ctx}`] !== "object"
+  ) {
+    logger("first time action in collection, adding new");
+    collection[`device_${device}`].actions[`ctx_${ctx}`] = {};
+  }
+
+  //queue check
+  logger(
+    'checking to see if the action id "' +
+      actionSettings.actionId +
+      '" provided exists in queue'
+  );
+  logger(
+    "checking queue: " + typeof collectionQueue[`id_${actionSettings.actionId}`]
+  );
+  if (typeof collectionQueue[`id_${actionSettings.actionId}`] === "object") {
+    logger("wow, it does! grab settings and merge, then remove");
+    actionSettings = {
+      ...actionSettings,
+      ...collectionQueue[`id_${actionSettings.actionId}`],
     };
+    delete collectionQueue[`id_${actionSettings.actionId}`];
+  }
+
+  for (const property in actionSettings) {
+    if (actionSettings[property] !== null) {
+      collection[`device_${device}`].actions[`ctx_${ctx}`][property] =
+        actionSettings[property];
+    }
+  }
+
+  logger("successfully added new device to collection, echoing");
+  logger(JSON.stringify(collection));
+}
+
+function collectionNewDevice(device, info) {
+  if (!device || !info) {
+    logger("ERR: no device or info was provided, exiting");
+    return;
+  }
+  logger(`collectionNewDevice recieved parameters: ${device}, ${info}`);
+
+  collection[`device_${device}`] = {};
+  collection[`device_${device}`].actions = {};
+  collection[`device_${device}`].info = info;
+
+  logger("successfully added new device to collection, echoing");
+  logger(JSON.stringify(collection));
+}
+
+function sendToElgatoWs(json) {
+  try {
     wsElgato.send(JSON.stringify(json));
   } catch (e) {
     logger(e);
   }
+}
+
+function showAlert(context) {
+  sendToElgatoWs({
+    event: "showAlert",
+    context: context,
+  });
+}
+
+function setTitle(device, context, title, update) {
+  if (update) {
+    collectionUpdateDeviceAction(device, context, { title: title });
+  }
+  sendToElgatoWs({
+    event: "setTitle",
+    context: context,
+    payload: {
+      title: title,
+    },
+  });
 }
 
 function openURL() {
-  try {
-    const json = {
-      event: "openUrl",
-      payload: {
-        url: "https://landie.land",
-      },
-    };
-    wsElgato.send(JSON.stringify(json));
-  } catch (e) {
-    logger(e);
-  }
+  sendToElgatoWs({
+    event: "openUrl",
+    payload: {
+      url: "https://landie.land",
+    },
+  });
 }
 
 function parseArgs(args) {
@@ -178,6 +400,7 @@ function parseArgs(args) {
 }
 
 function logger(msg) {
+  if (!debug) return;
   fs.appendFileSync("output.txt", msg + "\n", "utf-8");
 }
 

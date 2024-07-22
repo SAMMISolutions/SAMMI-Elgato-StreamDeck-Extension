@@ -3,9 +3,8 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta
-          name="viewport"
-          content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover" />
+    <meta name="viewport"
+        content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <title>com.elgato.template Property Inspector</title>
@@ -14,15 +13,30 @@
 
 <body>
     <div class="sdpi-wrapper">
-        
+
         <form id="property-inspector">
             <div class="sdpi-item">
                 <div data-localize class="sdpi-item-label" title="ID of this streamdeck action.">Action ID</div>
-                <input data-localize class="sdpi-item-value" name="actionId" type="text" value="" placeholder="Please set, or generate an Action ID" />
+                <input data-localize class="sdpi-item-value" name="actionId" type="text" value=""
+                    placeholder="Please set, or generate an Action ID" />
+            </div>
+            <div type="textarea" class="sdpi-item">
+                <div class="sdpi-item-label">Title</div>
+                <span class="sdpi-item-value textarea">
+                    <textarea type="textarea" name="title"></textarea>
+                </span>
             </div>
             <div class="sdpi-item">
-                <div data-localize class="sdpi-item-label" title="Title of this streamdeck action. Displays on the action itself!">Title</div>
-                <input data-localize class="sdpi-item-value" name="title" type="text" value="" placeholder="Enter some text here..." />
+                <div data-localize class="sdpi-item-label"
+                    title="Icon to display ontop of your background">Icon</div>
+                <input data-localize class="sdpi-item-value" name="icon" type="text" value=""
+                    placeholder="Filepath, URL, or Base64 goes here..." />
+            </div>
+            <div class="sdpi-item">
+                <div data-localize class="sdpi-item-label"
+                    title="Background of the action, displayed below your icon. Work in progress ⚠!">Background ⚠</div>
+                <input disabled data-localize class="sdpi-item-value" name="background" type="text" value=""
+                    placeholder="Not finished yet!" />
             </div>
         </form>
         <!-- <div class="sdpi-item">

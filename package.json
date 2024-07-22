@@ -4,7 +4,8 @@
   "description": "",
   "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "cd src/solutions.sammi.sdPlugin && pkg -t node18-win-x64 main.js && cd ../SAMMI_Extension && node compile_sef.js"
   },
   "keywords": [],
   "author": "",

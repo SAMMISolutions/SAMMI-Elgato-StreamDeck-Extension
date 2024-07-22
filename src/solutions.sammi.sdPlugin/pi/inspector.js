@@ -8,12 +8,14 @@ $PI.onConnected(jsn => {
   console.log(jsn);
   const form = document.querySelector("#property-inspector");
   const { actionInfo, appInfo, connection, messageType, port, uuid } = jsn;
-  const { payload, context } = actionInfo;
+  const { payload, context, device } = actionInfo;
   const { settings } = payload;
   let pluginWs = null;
   connectToPluginWs();
 
   let titleChanged = false;
+  let iconChanged = false;
+  let backgroundChanged = false;
 
   Utils.setFormValue(settings, form);
 
@@ -24,14 +26,36 @@ $PI.onConnected(jsn => {
     settings.actionId = generateActionId();
     Utils.setFormValue(settings, form);
     saveCurrentPI();
+    $PI.sendToPlugin({
+      event: "freshActionId",
+      context: context,
+      device: device,
+      actionId: settings.actionId,
+    });
+    // pluginWs.send(
+    //   JSON.stringify({
+    //     event: "freshActionId",
+    //     context: context,
+    //     device: device,
+    //     actionId: settings.actionId
+    //   })
+    // );
   } else {
     console.log("action id exists, should be visible now");
   }
 
   document
-    .querySelector('input[name="title"]')
+    .querySelector('textarea[name="title"]')
     .addEventListener("input", () => {
       titleChanged = true;
+    });
+  document.querySelector('input[name="icon"]').addEventListener("input", () => {
+    iconChanged = true;
+  });
+  document
+    .querySelector('input[name="background"]')
+    .addEventListener("input", () => {
+      backgroundChanged = true;
     });
 
   form.addEventListener(
@@ -43,7 +67,8 @@ $PI.onConnected(jsn => {
           JSON.stringify({
             event: "setTitle",
             context: context,
-            title: document.querySelector('input[name="title"]').value,
+            device: device,
+            title: document.querySelector('textarea[name="title"]').value,
           })
         );
         titleChanged = false;
@@ -67,7 +92,7 @@ $PI.onConnected(jsn => {
     };
 
     pluginWs.onmessage = event => {
-      console.log("recieved event: ", eventData);
+      console.log("recieved event: ", event);
     };
   }
 });

@@ -1,0 +1,9 @@
+{
+  "name": "Elgato StreamDeck",
+  "info": "Allows bi-directional communication between SAMMI and the Elgato StreamDeck software",
+  "version": "0.0.1",
+  "deck_config": {
+    "sammi_version":"2024.2.2",
+    "bridge": true
+  }
+}

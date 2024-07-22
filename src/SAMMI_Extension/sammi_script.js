@@ -1,29 +1,3 @@
-[extension_name]
-Elgato StreamDeck
-
-[extension_info]
-Allows bi-directional communication between SAMMI and the Elgato StreamDeck software
-
-[extension_version]
-0.0.1
-
-[insert_external]
-<h1>
-Placeholder
-</h1>
-
-[insert_command]
-SAMMI.extCommand('Elgato StreamDeck: Update Action', 4467268, 80, {
-    actionId: ['Action ID', 14, '', null, null],
-    saveVar: ['Save Result Variable', 14, '', null, null]
-});
-
-[insert_hook]
-case "Elgato StreamDeck: Update Action": {
-    sdPluginCUpdateAction(SAMMIJSON.actionId, SAMMIJSON.saveVar, SAMMIJSON.FromButton, SAMMIJSON.instanceId);
-} break
-
-[insert_script]
 const SD_PLUGIN_PORT = 9880;
 const SD_PLUGIN_CONNECTION_INTERVAL = 3000;
 
@@ -35,7 +9,7 @@ async function sdPluginDelay(ms) {
   new Promise(res => setTimeout(res, ms));
 }
 async function sdPluginConnectToWs() {
-  const wsUrl = `ws://127.0.0.1:${SD_PLUGIN_PORT}`;
+  const wsUrl = `ws://127.0.0.1:${SD_PLUGIN_PORT}/sammi-bridge`;
   window.sdPluginWs = new WebSocket(wsUrl); //use window to work around firefox connection issue
   window.sdPluginWs.onopen = () => {
     console.log("[Elgato StreamDeck] Connected!");
@@ -74,12 +48,35 @@ async function sdPluginConnectToWs() {
   };
 }
 
-
 // command functions
 
-function sdPluginCUpdateAction(actionId, saveVar, btn, instanceId) {
+function sdPluginCUpdateAction(
+  actionId,
+  title,
+  icon,
+  saveVar,
+  btn,
+  instanceId
+) {
+  console.log("is this running");
+  if (!actionId) {
+    SAMMI.alert(
+      `[Elgato StreamDeck] ERR: No action ID specified in button "${btn}"`
+    );
+    return;
+  }
+  const payload = {
+    event: "SAMMIUpdateAction",
+    actionId: actionId,
+    payload: {
+      title: title ? title : null,
+      icon: icon ? icon : null,
+    },
+  };
 
+  window.sdPluginWs.send(JSON.stringify(payload));
+
+  if (saveVar) {
+    SAMMI.setVariable(saveVar, true, btn, instanceId);
+  }
 }
-
-
-[insert_over]
