@@ -10,8 +10,8 @@ $PI.onConnected(jsn => {
   const { actionInfo, appInfo, connection, messageType, port, uuid } = jsn;
   const { payload, context, device } = actionInfo;
   const { settings } = payload;
-  let pluginWs = null;
-  connectToPluginWs();
+  // let pluginWs = null;
+  // connectToPluginWs();
 
   let titleChanged = false;
   let iconChanged = false;
@@ -63,38 +63,54 @@ $PI.onConnected(jsn => {
     Utils.debounce(150, () => {
       if (titleChanged) {
         //sends to plugin, not directly to elgato yet. plugin will format this properly!
-        pluginWs.send(
-          JSON.stringify({
-            event: "setTitle",
-            context: context,
-            device: device,
-            title: document.querySelector('textarea[name="title"]').value,
-          })
-        );
+        // pluginWs.send(
+        //   JSON.stringify({
+        //     event: "setTitle",
+        //     context: context,
+        //     device: device,
+        //     title: document.querySelector('textarea[name="title"]').value,
+        //   })
+        // );
+        $PI.sendToPlugin({
+          event: "setTitle",
+          context: context,
+          device: device,
+          title: document.querySelector('textarea[name="title"]').value,
+        });
         titleChanged = false;
+      }
+      if (iconChanged) {
+        $PI.sendToPlugin({
+          event: "setIcon",
+          context: context,
+          device: device,
+          icon: document.querySelector('input[name="icon"]').value,
+        });
+        iconChanged = false;
+
       }
       saveCurrentPI();
     })
   );
-  function connectToPluginWs() {
-    const url = `ws://127.0.0.1:${SD_PLUGIN_PORT}/pi`;
-    pluginWs = new WebSocket(url);
-    pluginWs.onopen = () => {
-      console.log("connected to plugin server");
-    };
+  // function connectToPluginWs() {
+  //   const url = `ws://127.0.0.1:${SD_PLUGIN_PORT}/pi`;
+  //   pluginWs = new WebSocket(url);
+  //   pluginWs.onopen = () => {
+  //     console.log("connected to plugin server");
+  //   };
 
-    pluginWs.onclose = async () => {
-      console.log("closed connection to plugin server");
-    };
+  //   pluginWs.onclose = async () => {
+  //     console.log("closed connection to plugin server");
+  //   };
 
-    pluginWs.onerror = error => {
-      console.log("plugin server error, ", error);
-    };
+  //   pluginWs.onerror = error => {
+  //     console.log("plugin server error, ", error);
+  //   };
 
-    pluginWs.onmessage = event => {
-      console.log("recieved event: ", event);
-    };
-  }
+  //   pluginWs.onmessage = event => {
+  //     console.log("recieved event: ", event);
+  //   };
+  // }
 });
 
 $PI.onDidReceiveGlobalSettings(({ payload }) => {

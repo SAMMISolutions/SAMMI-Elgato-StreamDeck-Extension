@@ -6,7 +6,7 @@
   "Name": "SAMMI",
   "Icon": "img/main",
   "URL": "https://sammi.solutions",
-  "Version": "1.0.0",
+  "Version": "0.1.0",
   "Software": {
     "MinimumVersion": "5.0"
   },
@@ -37,7 +37,7 @@
           "Image": "img/main"
         }
       ],
-      "Tooltip": "A bi-directional action for SAMMI",
+      "Tooltip": "A bi-directional action for SAMMI to interface with",
       "UUID": "solutions.sammi.sdPlugin.action",
       "PropertyInspectorPath": "pi/inspector.html",
       "UserTitleEnabled": false

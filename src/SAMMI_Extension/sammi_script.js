@@ -41,10 +41,28 @@ async function sdPluginConnectToWs() {
 
   window.sdPluginWs.onmessage = event => {
     const eventData = JSON.parse(event.data);
-    console.log("recieved event: ", eventData);
-    SAMMI.alert(
-      `[Elgato StreamDeck] Bridge recieved message from elgato, check console log`
-    );
+    console.log(eventData);
+    switch (eventData.event) {
+      case "error":
+        SAMMI.alert(`[Elgato Streamdeck] ERR: ${eventData.msg}`);
+        break;
+      case "pressed":
+        SAMMI.triggerExt("Elgato StreamDeck: Pressed", {
+          action_id: eventData.actionId,
+          title: eventData.title,
+          type: eventData.event,
+        });
+        break;
+      case "released":
+        SAMMI.triggerExt("Elgato StreamDeck: Released", {
+          action_id: eventData.actionId,
+          title: eventData.title,
+          type: eventData.event,
+        });
+        break;
+      default:
+        break;
+    }
   };
 }
 
@@ -58,7 +76,6 @@ function sdPluginCUpdateAction(
   btn,
   instanceId
 ) {
-  console.log("is this running");
   if (!actionId) {
     SAMMI.alert(
       `[Elgato StreamDeck] ERR: No action ID specified in button "${btn}"`

@@ -2,7 +2,10 @@ const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
 const fs = require("fs");
+const fsP = require('fs').promises;
 const process = require("process");
+const path = require("path");
+const axios = require("axios");
 
 let args = process.argv;
 // let args = [
@@ -46,6 +49,8 @@ let collectionQueue = {
 };
 
 const RELAY_PORT = 9880;
+const ERROR_IMG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAIAAACQkWg2AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAC+SURBVDhPtZHBCYQwEEXNQhQhTQi2YQn2YQM2YEd6C3qQKHiIDeSagwcPVqC4wf0sLiTisuy7zLxJBn6I9y0E9USapnEcU0qVUmVZYupiGIZ93/u+H8fRNEII3/dxZqVpmveNPM/NTlEUL72F1ppzDjl4oDpY13XbNsjB1UKWZVEUdV0Hv8DkruvaPKCqKoyukVK2bZskCfyEM9I0TdYwzoVlWdD9hXmezU9DPrFHIoQEQQC5A2MsDEPIT3jeEz5sR4t16Fp9AAAAAElFTkSuQmCC";
 
 //connect to generated elgato port over here!
 wsElgato = new WebSocket("ws://127.0.0.1:" + elgatoData.port);
@@ -84,7 +89,7 @@ function createRelayServer() {
 
   wss.on("connection", (ws, req) => {
     const fetchSource = url => {
-      if (url === "/pi") return "PI";
+      // if (url === "/pi") return "PI";
       if (url === "/sammi-bridge") return "SAMMI";
       logger("unknown source url: " + url);
       return null;
@@ -133,6 +138,10 @@ function parseEvent(e, source) {
       logger("event from SAMMI, update action!");
       SAMMIUpdateAction(data.actionId, data.payload);
       break;
+    case "setIcon":
+      logger("trying to set icon from elgato");
+      setIcon(data.device, data.context, data.icon, true, source);
+      break;
     case "setTitle":
       logger("trying to set title!");
       setTitle(data.device, data.context, data.title, true);
@@ -151,7 +160,8 @@ function parseEvent(e, source) {
         return;
       }
       sendToSAMMI({
-        event: "press",
+        event: "pressed",
+        title: data.payload.settings.title,
         actionId: data.payload.settings.actionId,
       });
       break;
@@ -165,7 +175,8 @@ function parseEvent(e, source) {
         return;
       }
       sendToSAMMI({
-        event: "release",
+        event: "released",
+        title: data.payload.settings.title,
         actionId: data.payload.settings.actionId,
       });
       break;
@@ -197,6 +208,7 @@ function parseEvent(e, source) {
         actionId: data.payload.settings.actionId,
       });
 
+      //title
       if (
         !collection[`device_${data.device}`].actions[`ctx_${data.context}`]
           ?.title
@@ -209,6 +221,29 @@ function parseEvent(e, source) {
           collection[`device_${data.device}`].actions[`ctx_${data.context}`]
             .title,
           false
+        );
+      }
+
+      //icon
+      if (
+        !collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+          ?.icon
+      ) {
+        setIcon(
+          data.device,
+          data.context,
+          data.payload.settings.icon,
+          true,
+          "Elgato"
+        );
+      } else {
+        setIcon(
+          data.device,
+          data.context,
+          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+            .icon,
+          false,
+          "Elgato"
         );
       }
 
@@ -226,7 +261,12 @@ function parsePiEvent(piEvent, data) {
         actionId: data.actionId,
       });
       break;
-
+    case "setTitle":
+      setTitle(data.device, data.context, data.title, true);
+      break;
+    case "setIcon":
+      setIcon(data.device, data.context, data.icon, true, "PI");
+      break;
     default:
       break;
   }
@@ -258,7 +298,20 @@ function SAMMIUpdateAction(actionId, sammiPayload) {
     }
   }
   if (sammiPayload.icon !== null) {
-    //TODO setIcon()
+    if (actionInfo !== null) {
+      setIcon(
+        actionInfo.device,
+        actionInfo.context,
+        sammiPayload.icon,
+        true,
+        "SAMMI"
+      );
+    } else {
+      // parseIcon(sammiPayload.icon).then(parsedIcon => {
+      //   collectionQueue[`id_${actionId}`].icon = parsedIcon;
+      // });
+      collectionQueue[`id_${actionId}`].icon = icon;
+    }
   }
 }
 
@@ -359,6 +412,32 @@ function showAlert(context) {
   });
 }
 
+async function setIcon(device, context, icon, update, source) {
+  const parsedIcon = await parseIcon(icon);
+  if (parsedIcon === ERROR_IMG) {
+    const errMsg = "Provided icon path was invalid.";
+    logger(`ERR: ${errMsg}`);
+    if (source === "SAMMI") {
+      sendToSAMMI({
+        event: "error",
+        msg: "Provided icon path was invalid.",
+      });
+    }
+  }
+
+  if (update) {
+    collectionUpdateDeviceAction(device, context, { icon: icon });
+  }
+
+  sendToElgatoWs({
+    event: "setImage",
+    context: context,
+    payload: {
+      image: parsedIcon,
+    },
+  });
+}
+
 function setTitle(device, context, title, update) {
   if (update) {
     collectionUpdateDeviceAction(device, context, { title: title });
@@ -410,4 +489,76 @@ async function wait(ms) {
       Promise.resolve();
     }, ms);
   });
+}
+
+async function parseIcon(icon) {
+  const type = determineImageType(icon);
+  let b64Uri = null;
+  switch (type) {
+    case "url":
+      b64Uri = await urlImgToBase64(icon);
+      break;
+    case "local":
+      b64Uri = await pathToBase64(icon);
+      break;
+    case "base64":
+      //! there is something wrong with this. This would be great to have to cache images for faster loading in collection.
+      // const VALID_IMAGE_MIMES = ["png", "jpg", "bmp"];
+      // const semiPos = icon.indexOf(";");
+      // const dataType = icon.substring(5, semiPos).toLowerCase();
+      // if (!VALID_IMAGE_MIMES.includes(dataType)) break;
+      b64Uri = icon;
+      break;
+    default:
+      break;
+  }
+  if (b64Uri === null) return ERROR_IMG;
+  return b64Uri;
+}
+
+function determineImageType(imgPath) {
+  if (imgPath.startsWith("https://") || imgPath.startsWith("http://"))
+    return "url";
+  if (imgPath.startsWith(":/", 1) || imgPath.startsWith(":\\", 1))
+    return "local";
+  if (imgPath.startsWith("data:")) return "base64";
+  return null;
+}
+
+async function pathToBase64(filepath) {
+  logger("filepath check " + filepath);
+  const VALID_IMAGES = [".png", ".jpeg", ".jpg", ".bmp"];
+  const extName = path.extname(filepath.toLowerCase());
+  logger("ext name: " + extName);
+  const isValid = VALID_IMAGES.includes(extName);
+  logger("valid? " + isValid);
+  if (!isValid) return null;
+  try {
+    logger("was valid!");
+    const data = await fsP.readFile(filepath);
+    logger("read path!");
+    const b64 = `data:image/${extName.substring(1)};base64,${Buffer.from(
+      data,
+      "binary"
+    ).toString("base64")}`;
+    logger("done! result: " + b64);
+    return b64;
+  } catch (e) {
+    logger("file to b64 errored... " + e);
+    return null;
+  }
+}
+
+async function urlImgToBase64(url) {
+  try {
+    const res = await axios.get(url, {
+      responseType: "arraybuffer",
+    });
+    const type = res.headers["content-type"];
+    if (!type.startsWith("image")) return null;
+    const imgBuffer = Buffer.from(res.data);
+    return `data:${type};base64,${imgBuffer.toString("base64")}`;
+  } catch (e) {
+    return null;
+  }
 }
