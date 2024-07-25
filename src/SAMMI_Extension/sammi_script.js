@@ -51,6 +51,7 @@ async function sdPluginConnectToWs() {
           action_id: eventData.actionId,
           title: eventData.title,
           type: eventData.event,
+          state: eventData.state
         });
         break;
       case "released":
@@ -58,6 +59,7 @@ async function sdPluginConnectToWs() {
           action_id: eventData.actionId,
           title: eventData.title,
           type: eventData.event,
+          state: eventData.state
         });
         break;
       default:
@@ -72,7 +74,7 @@ function sdPluginCUpdateAction(
   actionId,
   title,
   icon,
-  saveVar,
+  state,
   btn,
   instanceId
 ) {
@@ -88,12 +90,13 @@ function sdPluginCUpdateAction(
     payload: {
       title: title ? title : null,
       icon: icon ? icon : null,
+      state: state ? state : null
     },
   };
 
   window.sdPluginWs.send(JSON.stringify(payload));
 
-  if (saveVar) {
-    SAMMI.setVariable(saveVar, true, btn, instanceId);
-  }
+  // if (saveVar) {
+  //   SAMMI.setVariable(saveVar, true, btn, instanceId);
+  // }
 }

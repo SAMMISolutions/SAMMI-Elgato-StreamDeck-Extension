@@ -13,6 +13,7 @@ $PI.onConnected(jsn => {
   // let pluginWs = null;
   // connectToPluginWs();
 
+  let stateChanged = false;
   let titleChanged = false;
   let iconChanged = false;
   let backgroundChanged = false;
@@ -45,6 +46,11 @@ $PI.onConnected(jsn => {
   }
 
   document
+    .querySelector('input[name="state"]')
+    .addEventListener("input", () => {
+      stateChanged = true;
+    });
+  document
     .querySelector('textarea[name="title"]')
     .addEventListener("input", () => {
       titleChanged = true;
@@ -61,6 +67,16 @@ $PI.onConnected(jsn => {
   form.addEventListener(
     "input",
     Utils.debounce(150, () => {
+      if (stateChanged) {
+        $PI.sendToPlugin({
+          event: "setState",
+          context: context,
+          device: device,
+          icon: document.querySelector('input[name="state"]').value,
+        });
+        stateChanged = false;
+
+      }
       if (titleChanged) {
         //sends to plugin, not directly to elgato yet. plugin will format this properly!
         // pluginWs.send(

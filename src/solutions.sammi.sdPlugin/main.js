@@ -2,7 +2,7 @@ const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
 const fs = require("fs");
-const fsP = require('fs').promises;
+const fsP = require("fs").promises;
 const process = require("process");
 const path = require("path");
 const axios = require("axios");
@@ -161,8 +161,13 @@ function parseEvent(e, source) {
       }
       sendToSAMMI({
         event: "pressed",
-        title: data.payload.settings.title,
+        title:
+          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+            .title,
         actionId: data.payload.settings.actionId,
+        state:
+          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+            .state,
       });
       break;
     case "keyUp": //release
@@ -176,8 +181,13 @@ function parseEvent(e, source) {
       }
       sendToSAMMI({
         event: "released",
-        title: data.payload.settings.title,
+        title:
+          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+            .title,
         actionId: data.payload.settings.actionId,
+        state:
+          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+            .state,
       });
       break;
     case "willAppear": // action visible
@@ -208,6 +218,21 @@ function parseEvent(e, source) {
         actionId: data.payload.settings.actionId,
       });
 
+      //state
+      if (
+        !collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+          ?.state
+      ) {
+        setState(data.device, data.context, data.payload.settings.state, true);
+      } else {
+        setState(
+          data.device,
+          data.context,
+          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+            .state,
+          false
+        );
+      }
       //title
       if (
         !collection[`device_${data.device}`].actions[`ctx_${data.context}`]
@@ -260,6 +285,9 @@ function parsePiEvent(piEvent, data) {
       collectionUpdateDeviceAction(data.device, data.context, {
         actionId: data.actionId,
       });
+      break;
+    case "setState":
+      setState(data.device, data.context, data.icon, true, "PI");
       break;
     case "setTitle":
       setTitle(data.device, data.context, data.title, true);
@@ -320,6 +348,9 @@ function registerElgatoPlugin() {
     event: elgatoData.registerEvent,
     uuid: elgatoData.pluginUUID,
   });
+}
+function fetchContextFromActionId(actionId) {
+  
 }
 
 function fetchActionInfoFromActionId(actionId) {
@@ -438,7 +469,12 @@ async function setIcon(device, context, icon, update, source) {
   });
 }
 
-function setTitle(device, context, title, update) {
+async function setState(device, context, state, update) {
+  if (update) {
+    collectionUpdateDeviceAction(device, context, { state: state });
+  }
+}
+async function setTitle(device, context, title, update) {
   if (update) {
     collectionUpdateDeviceAction(device, context, { title: title });
   }
