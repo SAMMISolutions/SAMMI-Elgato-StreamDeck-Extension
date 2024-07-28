@@ -70,7 +70,7 @@ $PI.onConnected(jsn => {
       if (stateChanged) {
         $PI.sendToPlugin({
           event: "setState",
-          context: context,
+          actionId: settings.actionId,
           device: device,
           icon: document.querySelector('input[name="state"]').value,
         });
@@ -89,7 +89,7 @@ $PI.onConnected(jsn => {
         // );
         $PI.sendToPlugin({
           event: "setTitle",
-          context: context,
+          actionId: settings.actionId,
           device: device,
           title: document.querySelector('textarea[name="title"]').value,
         });
@@ -98,7 +98,7 @@ $PI.onConnected(jsn => {
       if (iconChanged) {
         $PI.sendToPlugin({
           event: "setIcon",
-          context: context,
+          actionId: settings.actionId,
           device: device,
           icon: document.querySelector('input[name="icon"]').value,
         });

@@ -162,11 +162,11 @@ function parseEvent(e, source) {
       sendToSAMMI({
         event: "pressed",
         title:
-          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+          collection[`device_${data.device}`].actions[`act_${data.payload.settings.actionId}`]
             .title,
         actionId: data.payload.settings.actionId,
         state:
-          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+          collection[`device_${data.device}`].actions[`act_${data.payload.settings.actionId}`]
             .state,
       });
       break;
@@ -182,11 +182,11 @@ function parseEvent(e, source) {
       sendToSAMMI({
         event: "released",
         title:
-          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+          collection[`device_${data.device}`].actions[`act_${data.payload.settings.actionId}`]
             .title,
         actionId: data.payload.settings.actionId,
         state:
-          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
+          collection[`device_${data.device}`].actions[`act_${data.payload.settings.actionId}`]
             .state,
       });
       break;
@@ -206,57 +206,87 @@ function parseEvent(e, source) {
       // );
       //check queue for matching id
 
-      // if (typeof collectionQueue[`id_${data.payload.settings?.actionId}`] === 'object') {
-      //   const queuedPayload = collectionQueue[`id_${data.payload.settings.actionId}`]
-      //   collectionUpdateDeviceAction(data.device, data.context, queuedPayload)
-      //   delete collectionQueue[`id_${data.payload.settings.actionId}`]
-      // } else {
-      // }
+      if (typeof collectionQueue[`id_${data.payload.settings?.actionId}`] === 'object') {
+        const queuedPayload = collectionQueue[`id_${data.payload.settings.actionId}`]
+        collectionUpdateDeviceAction(data.device, data.payload.settings.actionId, queuedPayload)
+        delete collectionQueue[`id_${data.payload.settings.actionId}`]
+      } else {
+      }
 
       //always update
-      collectionUpdateDeviceAction(data.device, data.context, {
-        actionId: data.payload.settings.actionId,
-      });
+      // collectionUpdateDeviceAction(
+      //   data.device,
+      //   data.payload.settings.actionId,
+      //   {
+      //     context: data.context,
+      //   }
+      // );
+      logger(
+        "attempting to add context " +
+          data.context +
+          " to collection with the action id " +
+          data.payload.settings.actionId
+      );
+      addContextToCollection(
+        data.payload.settings.actionId,
+        data.device,
+        data.context
+      );
 
       //state
       if (
-        !collection[`device_${data.device}`].actions[`ctx_${data.context}`]
-          ?.state
+        !collection[`device_${data.device}`].actions[
+          `act_${data.payload.settings.actionId}`
+        ]?.state
       ) {
-        setState(data.device, data.context, data.payload.settings.state, true);
+        setState(
+          data.device,
+          data.payload.settings.actionId,
+          data.payload.settings.state,
+          true
+        );
       } else {
         setState(
           data.device,
-          data.context,
-          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
-            .state,
+          data.payload.settings.actionId,
+          collection[`device_${data.device}`].actions[
+            `act_${data.payload.settings.actionId}`
+          ].state,
           false
         );
       }
       //title
       if (
-        !collection[`device_${data.device}`].actions[`ctx_${data.context}`]
-          ?.title
+        !collection[`device_${data.device}`].actions[
+          `act_${data.payload.settings.actionId}`
+        ]?.title
       ) {
-        setTitle(data.device, data.context, data.payload.settings.title, true);
+        setTitle(
+          data.device,
+          data.payload.settings.actionId,
+          data.payload.settings.title,
+          true
+        );
       } else {
         setTitle(
           data.device,
-          data.context,
-          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
-            .title,
+          data.payload.settings.actionId,
+          collection[`device_${data.device}`].actions[
+            `act_${data.payload.settings.actionId}`
+          ].title,
           false
         );
       }
 
       //icon
       if (
-        !collection[`device_${data.device}`].actions[`ctx_${data.context}`]
-          ?.icon
+        !collection[`device_${data.device}`].actions[
+          `act_${data.payload.settings.actionId}`
+        ]?.icon
       ) {
         setIcon(
           data.device,
-          data.context,
+          data.payload.settings.actionId,
           data.payload.settings.icon,
           true,
           "Elgato"
@@ -264,14 +294,19 @@ function parseEvent(e, source) {
       } else {
         setIcon(
           data.device,
-          data.context,
-          collection[`device_${data.device}`].actions[`ctx_${data.context}`]
-            .icon,
+          data.payload.settings.actionId,
+          collection[`device_${data.device}`].actions[
+            `act_${data.payload.settings.actionId}`
+          ].icon,
           false,
           "Elgato"
         );
       }
 
+      break;
+    case "willDisappear":
+      logger("removing context from collection");
+      removeContextFromCollection(data.payload.settings.actionId, data.device);
       break;
     default:
       break;
@@ -282,22 +317,52 @@ function parsePiEvent(piEvent, data) {
   switch (piEvent) {
     case "freshActionId":
       logger("oh, fresh ID! " + data.actionId);
-      collectionUpdateDeviceAction(data.device, data.context, {
-        actionId: data.actionId,
+      collectionUpdateDeviceAction(data.device, data.actionId, {
+        context: data.context,
       });
       break;
     case "setState":
-      setState(data.device, data.context, data.icon, true, "PI");
+      setState(data.device, data.actionId, data.icon, true, "PI");
       break;
     case "setTitle":
-      setTitle(data.device, data.context, data.title, true);
+      setTitle(data.device, data.actionId, data.title, true);
       break;
     case "setIcon":
-      setIcon(data.device, data.context, data.icon, true, "PI");
+      setIcon(data.device, data.actionId, data.icon, true, "PI");
       break;
     default:
       break;
   }
+}
+function fetchContextFromCollection(actionId, device) {
+  const ctx =
+    collection[`device_${device}`]?.actions[`act_${actionId}`]?.context;
+  if (ctx === undefined) return null;
+  return ctx;
+}
+
+function removeContextFromCollection(actionId, device) {
+  if (
+    collection[`device_${device}`]?.actions[`act_${actionId}`]?.context ===
+    undefined
+  )
+    return;
+
+  delete collection[`device_${device}`].actions[`act_${actionId}`].context;
+}
+
+function addContextToCollection(actionId, device, ctx) {
+  //make sure action obj exists before trying to add context
+  if (
+    typeof collection[`device_${device}`].actions[`act_${actionId}`] !==
+    "object"
+  ) {
+    collection[`device_${device}`].actions[`act_${actionId}`] = {};
+  }
+
+  collection[`device_${device}`].actions[`act_${actionId}`].context = ctx;
+
+  logger(`added context ${ctx} to action id ${actionId} in device ${device}`);
 }
 
 function SAMMIUpdateAction(actionId, sammiPayload) {
@@ -308,38 +373,28 @@ function SAMMIUpdateAction(actionId, sammiPayload) {
         actionId
     );
     logger("WARN: Queueing actionID");
-    collectionQueue[`id_${actionId}`] = sammiPayload;
+    //create object if it doesnt already exist
+    if (typeof collectionQueue[`id_${actionId}`] !== "object") {
+      collectionQueue[`id_${actionId}`] = {};
+    }
+
+    collectionQueue[`id_${actionId}`] = {
+      ...collectionQueue[`id_${actionId}`],
+      ...sammiPayload,
+    };
     collectionQueue[`id_${actionId}`].actionId = actionId;
     logger("echoed queue: " + JSON.stringify(collectionQueue));
     return;
   }
-  const collectionActionSettings =
-    collection[`device_${actionInfo.device}`].actions[
-      `ctx_${actionInfo.context}`
-    ];
 
   if (sammiPayload.title !== null) {
-    if (actionInfo !== null) {
-      setTitle(actionInfo.device, actionInfo.context, sammiPayload.title, true);
-    } else {
-      collectionQueue[`id_${actionId}`].title = sammiPayload.title;
-    }
+    setTitle(actionInfo.device, actionId, sammiPayload.title, true);
   }
   if (sammiPayload.icon !== null) {
-    if (actionInfo !== null) {
-      setIcon(
-        actionInfo.device,
-        actionInfo.context,
-        sammiPayload.icon,
-        true,
-        "SAMMI"
-      );
-    } else {
-      // parseIcon(sammiPayload.icon).then(parsedIcon => {
-      //   collectionQueue[`id_${actionId}`].icon = parsedIcon;
-      // });
-      collectionQueue[`id_${actionId}`].icon = icon;
-    }
+    setIcon(actionInfo.device, actionId, sammiPayload.icon, true, "SAMMI");
+  }
+  if (sammiPayload.state !== null) {
+    setState(actionInfo.device, actionId, sammiPayload.state, true);
   }
 }
 
@@ -349,62 +404,59 @@ function registerElgatoPlugin() {
     uuid: elgatoData.pluginUUID,
   });
 }
-function fetchContextFromActionId(actionId) {
-  
-}
 
 function fetchActionInfoFromActionId(actionId) {
   for (let deviceKey in collection) {
-    let actions = collection[deviceKey].actions;
-    for (let contextKey in actions) {
-      if (actions[contextKey].actionId === actionId) {
-        return {
-          device: deviceKey.replace("device_", ""),
-          context: contextKey.replace("ctx_", ""),
-        };
-      }
+    if (collection[deviceKey]?.actions[`act_${actionId}`]?.context) {
+      return {
+        device: deviceKey.replace("device_", ""),
+        context: collection[deviceKey].actions[`act_${actionId}`].context,
+      };
     }
   }
   return null;
 }
 
-function collectionUpdateDeviceAction(device, ctx, actionSettings) {
-  if (!device || !ctx) {
-    logger("ERR: no device or info was provided, exiting");
+function collectionUpdateDeviceAction(device, actionId, actionSettings) {
+  if (!device || !actionId) {
+    logger("ERR: no device or action id was provided, exiting");
+    return;
+  }
+  if (!actionSettings) {
+    logger("ERR: no action settings to update, exiting");
     return;
   }
   logger(
-    `collectionUpdateDeviceAction recieved parameters: ${device}, ${ctx}, ${actionSettings}`
+    `collectionUpdateDeviceAction recieved parameters: ${device}, ${actionId}, ${actionSettings}`
   );
 
   if (
-    typeof collection[`device_${device}`].actions[`ctx_${ctx}`] !== "object"
+    typeof collection[`device_${device}`].actions[`act_${actionId}`] !==
+    "object"
   ) {
     logger("first time action in collection, adding new");
-    collection[`device_${device}`].actions[`ctx_${ctx}`] = {};
+    collection[`device_${device}`].actions[`act_${actionId}`] = {};
   }
 
   //queue check
   logger(
     'checking to see if the action id "' +
-      actionSettings.actionId +
+      actionId +
       '" provided exists in queue'
   );
-  logger(
-    "checking queue: " + typeof collectionQueue[`id_${actionSettings.actionId}`]
-  );
-  if (typeof collectionQueue[`id_${actionSettings.actionId}`] === "object") {
+  logger("checking queue: " + typeof collectionQueue[`id_${actionId}`]);
+  if (typeof collectionQueue[`id_${actionId}`] === "object") {
     logger("wow, it does! grab settings and merge, then remove");
     actionSettings = {
       ...actionSettings,
-      ...collectionQueue[`id_${actionSettings.actionId}`],
+      ...collectionQueue[`id_${actionId}`],
     };
-    delete collectionQueue[`id_${actionSettings.actionId}`];
+    delete collectionQueue[`id_${actionId}`];
   }
 
   for (const property in actionSettings) {
     if (actionSettings[property] !== null) {
-      collection[`device_${device}`].actions[`ctx_${ctx}`][property] =
+      collection[`device_${device}`].actions[`act_${actionId}`][property] =
         actionSettings[property];
     }
   }
@@ -443,7 +495,17 @@ function showAlert(context) {
   });
 }
 
-async function setIcon(device, context, icon, update, source) {
+async function setIcon(device, actionId, icon, update, source) {
+  const actionInfo = fetchActionInfoFromActionId(actionId);
+  if (actionInfo === null) {
+    logger("ERR: Could not fetch action info in setIcon");
+    return;
+  }
+
+  if (update) {
+    collectionUpdateDeviceAction(device, actionId, { icon: icon });
+  }
+
   const parsedIcon = await parseIcon(icon);
   if (parsedIcon === ERROR_IMG) {
     const errMsg = "Provided icon path was invalid.";
@@ -456,31 +518,35 @@ async function setIcon(device, context, icon, update, source) {
     }
   }
 
-  if (update) {
-    collectionUpdateDeviceAction(device, context, { icon: icon });
-  }
-
   sendToElgatoWs({
     event: "setImage",
-    context: context,
+    context: actionInfo.context,
     payload: {
       image: parsedIcon,
     },
   });
 }
 
-async function setState(device, context, state, update) {
+async function setState(device, actionId, state, update) {
   if (update) {
-    collectionUpdateDeviceAction(device, context, { state: state });
+    collectionUpdateDeviceAction(device, actionId, { state: state });
   }
 }
-async function setTitle(device, context, title, update) {
+async function setTitle(device, actionId, title, update) {
+  logger('requested to set title, recieved params:')
+  logger(`${device},  ${actionId}, ${title}, ${update}`)
+  const actionInfo = fetchActionInfoFromActionId(actionId);
+  if (actionInfo === null) {
+    logger("ERR: Could not fetch action info in setTitle");
+    return;
+  }
+
   if (update) {
-    collectionUpdateDeviceAction(device, context, { title: title });
+    collectionUpdateDeviceAction(device, actionId, { title: title });
   }
   sendToElgatoWs({
     event: "setTitle",
-    context: context,
+    context: actionInfo.context,
     payload: {
       title: title,
     },
