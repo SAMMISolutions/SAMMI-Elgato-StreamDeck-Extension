@@ -1,7 +1,10 @@
 /// <reference path="../libs/js/property-inspector.js" />
 /// <reference path="../libs/js/utils.js" />
 
-const SD_PLUGIN_PORT = 9880;
+let customPropertiesChanged = false;
+let titleChanged = false;
+let iconChanged = false;
+let backgroundChanged = false;
 
 $PI.onConnected(jsn => {
   //$PI.openUrl("https://landie.land");
@@ -13,10 +16,7 @@ $PI.onConnected(jsn => {
   // let pluginWs = null;
   // connectToPluginWs();
 
-  let stateChanged = false;
-  let titleChanged = false;
-  let iconChanged = false;
-  let backgroundChanged = false;
+  generateCustomPropertyFields(settings?.customProperties);
 
   Utils.setFormValue(settings, form);
 
@@ -44,12 +44,6 @@ $PI.onConnected(jsn => {
   } else {
     console.log("action id exists, should be visible now");
   }
-
-  document
-    .querySelector('input[name="state"]')
-    .addEventListener("input", () => {
-      stateChanged = true;
-    });
   document
     .querySelector('textarea[name="title"]')
     .addEventListener("input", () => {
@@ -63,70 +57,70 @@ $PI.onConnected(jsn => {
     .addEventListener("input", () => {
       backgroundChanged = true;
     });
+  document.querySelector("table").addEventListener("input", e => {
+    console.log("table changed");
+    customPropertiesChanged = true;
+  });
+  document.querySelector("table").addEventListener("click", e => {
+    const target = e.target;
+    const isDiscard = target.classList.contains("discard");
+
+    if (isDiscard) {
+      const closestTr = target.closest("tr");
+      closestTr.parentNode.removeChild(closestTr);
+      customPropertiesChanged = true;
+      validatePI();
+    }
+  });
 
   form.addEventListener(
     "input",
     Utils.debounce(150, () => {
-      if (stateChanged) {
-        $PI.sendToPlugin({
-          event: "setState",
-          actionId: settings.actionId,
-          device: device,
-          icon: document.querySelector('input[name="state"]').value,
-        });
-        stateChanged = false;
-
-      }
-      if (titleChanged) {
-        //sends to plugin, not directly to elgato yet. plugin will format this properly!
-        // pluginWs.send(
-        //   JSON.stringify({
-        //     event: "setTitle",
-        //     context: context,
-        //     device: device,
-        //     title: document.querySelector('textarea[name="title"]').value,
-        //   })
-        // );
-        $PI.sendToPlugin({
-          event: "setTitle",
-          actionId: settings.actionId,
-          device: device,
-          title: document.querySelector('textarea[name="title"]').value,
-        });
-        titleChanged = false;
-      }
-      if (iconChanged) {
-        $PI.sendToPlugin({
-          event: "setIcon",
-          actionId: settings.actionId,
-          device: device,
-          icon: document.querySelector('input[name="icon"]').value,
-        });
-        iconChanged = false;
-
-      }
-      saveCurrentPI();
+      validatePI();
     })
   );
-  // function connectToPluginWs() {
-  //   const url = `ws://127.0.0.1:${SD_PLUGIN_PORT}/pi`;
-  //   pluginWs = new WebSocket(url);
-  //   pluginWs.onopen = () => {
-  //     console.log("connected to plugin server");
-  //   };
 
-  //   pluginWs.onclose = async () => {
-  //     console.log("closed connection to plugin server");
-  //   };
+  function validatePI() {
+    console.log("debounced");
+    const extras = {};
+    if (titleChanged) {
+      $PI.sendToPlugin({
+        event: "setTitle",
+        actionId: settings.actionId,
+        device: device,
+        title: document.querySelector('textarea[name="title"]').value,
+      });
+      titleChanged = false;
+    }
+    if (iconChanged) {
+      $PI.sendToPlugin({
+        event: "setIcon",
+        actionId: settings.actionId,
+        device: device,
+        icon: document.querySelector('input[name="icon"]').value,
+      });
+      iconChanged = false;
+    }
 
-  //   pluginWs.onerror = error => {
-  //     console.log("plugin server error, ", error);
-  //   };
+    if (customPropertiesChanged) {
+      // custom properties inject
+      const customProperties = buildCustomPropertyObj();
+      if (!customProperties) {
+        customPropertiesChanged = false;
+        return;
+      }
+      extras.customProperties = customProperties;
+      $PI.sendToPlugin({
+        event: "setCustomProperties",
+        actionId: settings.actionId,
+        device: device,
+        customProperties: customProperties
+      })
+      customPropertiesChanged = false;
+    }
 
-  //   pluginWs.onmessage = event => {
-  //     console.log("recieved event: ", event);
-  //   };
-  // }
+    saveCurrentPI(extras);
+  }
 });
 
 $PI.onDidReceiveGlobalSettings(({ payload }) => {
@@ -144,6 +138,33 @@ window.sendToInspector = data => {
 // document.querySelector('#open-external').addEventListener('click', () => {
 //     window.open('../../../external.html');
 // });
+
+function generateCustomPropertyFields(customProperties) {
+  console.log("attempting to generating custom properties");
+  console.log("provided: ", customProperties);
+  if (!customProperties) return;
+  //set the first property, then +1 to index on for loop to skip it
+  let keys = Object.keys(customProperties);
+  console.log("initial length: ", keys.length);
+  console.log("initial keys list: ", keys);
+
+  if (keys.length === 0) return;
+  console.log("setting the first entry to the inputs that exist");
+
+  document.querySelector(".tdcp-key input").value = keys[0];
+  document.querySelector(".tdcp-value input").value = customProperties[keys[0]];
+  console.log("done, new keys list: ", keys);
+
+  if (keys.length === 0) return;
+  console.log("generating the rest.");
+
+  for (let i = 1; i < keys.length; i++) {
+    const key = keys[i];
+    const value = customProperties[key];
+    createNewProperty(key, value);
+  }
+}
+
 /**
  * Intended for use when an action is freshly created, or is blank. Required for SAMMI to communicate to actions
  * @returns a randomly generated action ID
@@ -152,14 +173,119 @@ function generateActionId() {
   return window.crypto.randomUUID();
 }
 
+function buildCustomPropertyObj() {
+  const keyNodes = document.querySelectorAll(".trcp");
+  const customProperties = {};
+  const existingKeys = [];
+
+  const captionCaution = document.querySelector("table caption");
+  captionCaution.style.display = "none";
+  for (let i = 0; i < keyNodes.length; i++) {
+    const keyNode = keyNodes[i];
+    keyNode.style.backgroundColor = "";
+    const key = keyNode.querySelector(".tdcp-key input").value;
+    existingKeys.push(key);
+  }
+
+  for (let i = 0; i < keyNodes.length; i++) {
+    const keyNode = keyNodes[i];
+    const invalid = (msg, targetNode) => {
+      console.error(msg);
+      console.log(targetNode);
+      captionCaution.style.display = "";
+      captionCaution.textContent = `⚠ ${msg}`;
+      targetNode.style.backgroundColor = "red";
+    };
+    const key = keyNode.querySelector(".tdcp-key input").value;
+    console.log("key value found: ", key);
+    const value = keyNode.querySelector(".tdcp-value input").value;
+    console.log("value value found: ", value);
+
+    if (key === "") {
+      invalid("You must fill out the key field!", keyNode);
+      return false;
+    }
+
+    if (key.match(/^\d/g)) {
+      invalid("Keys cannot start with a number.", keyNode);
+      return false;
+    }
+
+    if (!key.match(/^[a-zA-Z0-9_]+$/g)) {
+      invalid(
+        "Keys can only contain letters A-Z, number 0-9, and underscores.",
+        keyNode
+      );
+      return false;
+    }
+
+    if (existingKeys.filter(eKey => eKey === key).length > 1) {
+      invalid("You cannot have duplicate keys.", keyNode);
+      return false;
+    }
+
+    //valid for object
+    customProperties[key] = value;
+  }
+  return customProperties;
+}
+
 /**
  * Grabs the current PI form, then saves it's contents. ONLY run this in the $PI.onConnected callback function,
  * as this ensures that the form is available and has contents.
  */
-function saveCurrentPI() {
+function saveCurrentPI(extras) {
   const form = document.querySelector("#property-inspector");
-  const value = Utils.getFormValue(form);
+  let value = Utils.getFormValue(form);
+
+  if (typeof extras === "object" && Object.keys(extras).length > 0) {
+    value = {
+      ...value,
+      ...extras,
+    };
+  }
+
+  console.log("value to save persistently: ", value);
   $PI.setSettings(value);
+}
+
+//table listener
+document.querySelector("table").addEventListener("click", e => {});
+
+function createNewProperty(key, value) {
+  const table = document.querySelector("table tbody");
+  const tr = document.createElement("tr");
+  const td = document.createElement("td");
+  const td2 = document.createElement("td");
+  tr.classList.add("trcp");
+  td.classList.add("tdcp-key");
+  td2.classList.add("tdcp-value");
+  const tdInput = parseHTMLFromString(`<input type="text">`);
+  const td2Input = parseHTMLFromString(`<input type="text">`);
+  const td2Discard = parseHTMLFromString(`<button type="button" class="discard">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor"
+                                    class="bi bi-trash" viewBox="0 0 16 16" style="
+                                margin: 0;">
+                                    <path
+                                        d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5m3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0z">
+                                    </path>
+                                    <path
+                                        d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4zM2.5 3h11V2h-11z">
+                                    </path>
+                                </svg>
+                            </button>`);
+  if (key) {
+    tdInput.value = key;
+  }
+  if (value) {
+    td2Input.value = value;
+  }
+  td.appendChild(tdInput);
+  td2.appendChild(td2Input);
+  td2.appendChild(td2Discard);
+  tr.appendChild(td);
+  tr.appendChild(td2);
+  table.insertBefore(tr, table.lastElementChild);
 }
 
 /** 
@@ -218,6 +344,18 @@ function clickTab(clickedTab) {
       }
     }
   });
+}
+
+/**
+ * Parses HTML contained in a string to a HTML Node
+ *
+ * @param   htmlString  String containing HTML to parse
+ * @returns NodeElement of parsed HTML string
+ */
+function parseHTMLFromString(htmlString) {
+  const parser = new DOMParser();
+  const parsedHTML = parser.parseFromString(htmlString, "text/html");
+  return parsedHTML.body.firstChild;
 }
 
 activateTabs();

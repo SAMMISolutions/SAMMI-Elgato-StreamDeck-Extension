@@ -8,7 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <title>com.elgato.template Property Inspector</title>
-    <link rel="stylesheet" href="../libs/css/sdpi.css" />
+    <link rel="stylesheet" href="inspector.css" />
 </head>
 
 <body>
@@ -20,11 +20,12 @@
                 <input data-localize class="sdpi-item-value" name="actionId" type="text" value=""
                     placeholder="Please set, or generate an Action ID" />
             </div>
-            <div class="sdpi-item">
+            <!-- <div class="sdpi-item">
                 <div data-localize class="sdpi-item-label" title="Set a custom state to manipulate and read from">State</div>
                 <input data-localize class="sdpi-item-value" name="state" type="text" value=""
                     placeholder="Whatever you'd like!" />
-            </div>
+            </div> -->
+
             <div type="textarea" class="sdpi-item">
                 <div class="sdpi-item-label" title="Sets the text overlayed ontop of the action">Title</div>
                 <span class="sdpi-item-value textarea">
@@ -32,8 +33,7 @@
                 </span>
             </div>
             <div class="sdpi-item">
-                <div data-localize class="sdpi-item-label"
-                    title="Icon to display ontop of your background">Icon</div>
+                <div data-localize class="sdpi-item-label" title="Icon to display ontop of your background">Icon</div>
                 <input data-localize class="sdpi-item-value" name="icon" type="text" value=""
                     placeholder="Filepath, URL, or Base64 goes here..." />
             </div>
@@ -42,6 +42,29 @@
                     title="Background of the action, displayed below your icon. Work in progress ⚠!">Background ⚠</div>
                 <input disabled data-localize class="sdpi-item-value" name="background" type="text" value=""
                     placeholder="Not finished yet!" />
+            </div>
+            <div class="sdpi-item" id="tableid1">
+                <div class="sdpi-item-label">Custom Parameters</div>
+                <table class="sdpi-item-value" width="100%" style="padding: 0;">
+                    <caption style="display: none;">test</caption>
+                    <tr>
+                        <td>Key</td>
+                        <td>Value</td>
+                    </tr>
+                    <tr class="trcp">
+                        <td class="tdcp-key">
+                            <input type="text">
+                        </td>
+                        <td class="tdcp-value">
+                            <input type="text" style="max-width: 100%; min-width: 106%;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="display: flex; justify-content: center;"><button type="button"
+                                onclick="createNewProperty()"
+                                style="margin: 0; position: relative; bottom: 0; right: -80px;">+</button></td>
+                    </tr>
+                </table>
             </div>
         </form>
         <!-- <div class="sdpi-item">

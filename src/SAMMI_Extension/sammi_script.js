@@ -51,7 +51,7 @@ async function sdPluginConnectToWs() {
           action_id: eventData.actionId,
           title: eventData.title,
           type: eventData.event,
-          state: eventData.state
+          custom_properties: eventData.customProperties,
         });
         break;
       case "released":
@@ -59,7 +59,7 @@ async function sdPluginConnectToWs() {
           action_id: eventData.actionId,
           title: eventData.title,
           type: eventData.event,
-          state: eventData.state
+          custom_properties: eventData.customProperties,
         });
         break;
       default:
@@ -74,7 +74,7 @@ function sdPluginCUpdateAction(
   actionId,
   title,
   icon,
-  state,
+  customProperties,
   btn,
   instanceId
 ) {
@@ -84,17 +84,39 @@ function sdPluginCUpdateAction(
     );
     return;
   }
+  let verifiedCustomProperties = null;
+  if (customProperties) {
+    verifiedCustomProperties = verifyCustomProperties(customProperties);
+    if (verifiedCustomProperties === false) {
+      SAMMI.alert(
+        "[Elgato StreamDeck] ERR: Custom Properties JSON was not formatted properly"
+      );
+      return;
+    }
+    console.log("custom props passed: ", verifiedCustomProperties);
+  }
+
   const payload = {
     event: "SAMMIUpdateAction",
     actionId: actionId,
     payload: {
       title: title ? title : null,
       icon: icon ? icon : null,
-      state: state ? state : null
+      customProperties: verifiedCustomProperties,
     },
   };
 
   window.sdPluginWs.send(JSON.stringify(payload));
+
+  function verifyCustomProperties(cProps) {
+    let parsedCProps = false;
+    try {
+      parsedCProps = JSON.parse(cProps);
+    } catch (e) {
+      return false;
+    }
+    return parsedCProps;
+  }
 
   // if (saveVar) {
   //   SAMMI.setVariable(saveVar, true, btn, instanceId);

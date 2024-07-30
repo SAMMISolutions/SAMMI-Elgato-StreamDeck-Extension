@@ -162,12 +162,18 @@ function parseEvent(e, source) {
       sendToSAMMI({
         event: "pressed",
         title:
-          collection[`device_${data.device}`].actions[`act_${data.payload.settings.actionId}`]
-            .title,
+          collection[`device_${data.device}`].actions[
+            `act_${data.payload.settings.actionId}`
+          ].title,
         actionId: data.payload.settings.actionId,
-        state:
-          collection[`device_${data.device}`].actions[`act_${data.payload.settings.actionId}`]
-            .state,
+        // state:
+        //   collection[`device_${data.device}`].actions[
+        //     `act_${data.payload.settings.actionId}`
+        //   ].state,
+        customProperties:
+          collection[`device_${data.device}`].actions[
+            `act_${data.payload.settings.actionId}`
+          ].customProperties,
       });
       break;
     case "keyUp": //release
@@ -182,12 +188,18 @@ function parseEvent(e, source) {
       sendToSAMMI({
         event: "released",
         title:
-          collection[`device_${data.device}`].actions[`act_${data.payload.settings.actionId}`]
-            .title,
+          collection[`device_${data.device}`].actions[
+            `act_${data.payload.settings.actionId}`
+          ].title,
         actionId: data.payload.settings.actionId,
-        state:
-          collection[`device_${data.device}`].actions[`act_${data.payload.settings.actionId}`]
-            .state,
+        // state:
+        //   collection[`device_${data.device}`].actions[
+        //     `act_${data.payload.settings.actionId}`
+        //   ].state,
+        customProperties:
+          collection[`device_${data.device}`].actions[
+            `act_${data.payload.settings.actionId}`
+          ].customProperties,
       });
       break;
     case "willAppear": // action visible
@@ -204,12 +216,21 @@ function parseEvent(e, source) {
       //   data.payload.settings,
 
       // );
+
       //check queue for matching id
 
-      if (typeof collectionQueue[`id_${data.payload.settings?.actionId}`] === 'object') {
-        const queuedPayload = collectionQueue[`id_${data.payload.settings.actionId}`]
-        collectionUpdateDeviceAction(data.device, data.payload.settings.actionId, queuedPayload)
-        delete collectionQueue[`id_${data.payload.settings.actionId}`]
+      if (
+        typeof collectionQueue[`id_${data.payload.settings?.actionId}`] ===
+        "object"
+      ) {
+        const queuedPayload =
+          collectionQueue[`id_${data.payload.settings.actionId}`];
+        collectionUpdateDeviceAction(
+          data.device,
+          data.payload.settings.actionId,
+          queuedPayload
+        );
+        delete collectionQueue[`id_${data.payload.settings.actionId}`];
       } else {
       }
 
@@ -233,25 +254,48 @@ function parseEvent(e, source) {
         data.context
       );
 
-      //state
+      // //state
+      // if (
+      //   !collection[`device_${data.device}`].actions[
+      //     `act_${data.payload.settings.actionId}`
+      //   ]?.state
+      // ) {
+      //   setState(
+      //     data.device,
+      //     data.payload.settings.actionId,
+      //     data.payload.settings.state,
+      //     true
+      //   );
+      // } else {
+      //   setState(
+      //     data.device,
+      //     data.payload.settings.actionId,
+      //     collection[`device_${data.device}`].actions[
+      //       `act_${data.payload.settings.actionId}`
+      //     ].state,
+      //     false
+      //   );
+      // }
+
+      //custom properties
       if (
         !collection[`device_${data.device}`].actions[
           `act_${data.payload.settings.actionId}`
-        ]?.state
+        ]?.customProperties
       ) {
-        setState(
+        setCustomProperties(
           data.device,
           data.payload.settings.actionId,
-          data.payload.settings.state,
+          data.payload.settings.customProperties,
           true
         );
       } else {
-        setState(
+        setCustomProperties(
           data.device,
           data.payload.settings.actionId,
           collection[`device_${data.device}`].actions[
             `act_${data.payload.settings.actionId}`
-          ].state,
+          ].customProperties,
           false
         );
       }
@@ -321,8 +365,17 @@ function parsePiEvent(piEvent, data) {
         context: data.context,
       });
       break;
-    case "setState":
-      setState(data.device, data.actionId, data.icon, true, "PI");
+    // case "setState":
+    //   setState(data.device, data.actionId, data.icon, true, "PI");
+    //   break;
+    case "setCustomProperties":
+      setCustomProperties(
+        data.device,
+        data.actionId,
+        data.customProperties,
+        true,
+        "PI"
+      );
       break;
     case "setTitle":
       setTitle(data.device, data.actionId, data.title, true);
@@ -393,8 +446,17 @@ function SAMMIUpdateAction(actionId, sammiPayload) {
   if (sammiPayload.icon !== null) {
     setIcon(actionInfo.device, actionId, sammiPayload.icon, true, "SAMMI");
   }
-  if (sammiPayload.state !== null) {
-    setState(actionInfo.device, actionId, sammiPayload.state, true);
+  // if (sammiPayload.state !== null) {
+  //   setState(actionInfo.device, actionId, sammiPayload.state, true);
+  // }
+  if (sammiPayload.customProperties !== null) {
+    setCustomProperties(
+      actionInfo.device,
+      actionId,
+      sammiPayload.customProperties,
+      true,
+      "SAMMI"
+    );
   }
 }
 
@@ -461,7 +523,7 @@ function collectionUpdateDeviceAction(device, actionId, actionSettings) {
     }
   }
 
-  logger("successfully added new device to collection, echoing");
+  logger("successfully added new action data to collection, echoing");
   logger(JSON.stringify(collection));
 }
 
@@ -527,14 +589,23 @@ async function setIcon(device, actionId, icon, update, source) {
   });
 }
 
-async function setState(device, actionId, state, update) {
+async function setCustomProperties(device, actionId, customProperties, update) {
+  logger("requested to set custom properties, recieved params:");
+  logger(`${device},  ${actionId}, ${JSON.stringify(customProperties)}, ${update}`);
   if (update) {
-    collectionUpdateDeviceAction(device, actionId, { state: state });
+    collectionUpdateDeviceAction(device, actionId, {
+      customProperties: customProperties,
+    });
   }
 }
+// async function setState(device, actionId, state, update) {
+//   if (update) {
+//     collectionUpdateDeviceAction(device, actionId, { state: state });
+//   }
+// }
 async function setTitle(device, actionId, title, update) {
-  logger('requested to set title, recieved params:')
-  logger(`${device},  ${actionId}, ${title}, ${update}`)
+  logger("requested to set title, recieved params:");
+  logger(`${device},  ${actionId}, ${title}, ${update}`);
   const actionInfo = fetchActionInfoFromActionId(actionId);
   if (actionInfo === null) {
     logger("ERR: Could not fetch action info in setTitle");
