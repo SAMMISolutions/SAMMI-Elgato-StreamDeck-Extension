@@ -35,7 +35,7 @@ const compileOver = async config => {
     const compiledDeck = { ...deck, ...config };
     return JSON.stringify(compiledDeck);
   } catch (e) {
-    return ''
+    return "";
   }
 };
 
@@ -72,6 +72,13 @@ ${script}
 
 [insert_over]
 ${overData}`;
+
+  // // Replace LF with CRLF
+  // SammiExtension = SammiExtension.replace(/\n/g, "\r\n");
+  
+  // Ensure all line endings are CRLF (\r\n)
+  SammiExtension = SammiExtension.replace(/((?<!\r)\n|\r(?!\n))/g, "\r\n");
+  
   await fs.writeFile("compiled.sef", SammiExtension, { encoding: "utf8" });
 };
 
