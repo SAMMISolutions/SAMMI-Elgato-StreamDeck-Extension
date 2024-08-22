@@ -1,0 +1,1 @@
+DistributionTool.exe -b -i solutions.sammi.sdPlugin -o SAMMI_SD_Final

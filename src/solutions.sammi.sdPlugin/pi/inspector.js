@@ -201,6 +201,8 @@ function buildCustomPropertyObj() {
     const value = keyNode.querySelector(".tdcp-value input").value;
     console.log("value value found: ", value);
 
+    if (keyNodes.length === 1 && key === '') continue;
+
     if (key === "") {
       invalid("You must fill out the key field!", keyNode);
       return false;

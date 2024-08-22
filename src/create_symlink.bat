@@ -1,0 +1,1 @@
+mklink /D "C:\Users\%USERNAME%\AppData\Roaming\Elgato\StreamDeck\Plugins\solutions.sammi.sdPlugin" "%cd%\solutions.sammi.sdPlugin"

@@ -1,12 +1,12 @@
 {
   "SDKVersion": 2,
-  "Author": "Landie",
+  "Author": "SAMMI Solutions",
   "CodePath": "main.exe",
   "Description": "Enables bi-directional communication with SAMMI",
   "Name": "SAMMI",
   "Icon": "img/main",
-  "URL": "https://sammi.solutions",
-  "Version": "0.1.0",
+  "URL": "https://sammisolutions.itch.io/elgato-stream-deck",
+  "Version": "1.0.0",
   "Software": {
     "MinimumVersion": "5.0"
   },
@@ -23,15 +23,6 @@
       "Icon": "img/main",
       "Name": "Action",
       "Controllers": ["Keypad", "Encoder"],
-      "Encoder": {
-        "layout": "$B1",
-        "TriggerDescription": {
-          "Rotate": "Describe the rotation",
-          "Push": "Describe the encoder push",
-          "Touch": "Describe the touch",
-          "LongTouch": "Describe the long touch"
-        }
-      },
       "States": [
         {
           "Image": "img/main"

@@ -12,21 +12,21 @@ async function sdPluginConnectToWs() {
   const wsUrl = `ws://127.0.0.1:${SD_PLUGIN_PORT}/sammi-bridge`;
   window.sdPluginWs = new WebSocket(wsUrl); //use window to work around firefox connection issue
   window.sdPluginWs.onopen = () => {
-    console.log("[Elgato StreamDeck] Connected!");
-    SAMMI.alert("[Elgato StreamDeck] Connected!");
+    console.log("[Elgato Stream Deck] Connected!");
+    SAMMI.alert("[Elgato Stream Deck] Connected!");
   };
 
   window.sdPluginWs.onclose = async () => {
     SAMMI.setVariable("bridge_relay_connected", false, "Sando");
-    console.log("[Elgato StreamDeck] Disconnected.");
+    console.log("[Elgato Stream Deck] Disconnected.");
     console.log(
-      `[Elgato StreamDeck] Retrying conection in ${
+      `[Elgato Stream Deck] Retrying conection in ${
         SD_PLUGIN_CONNECTION_INTERVAL / 1000
       }s`
     );
-    SAMMI.alert("[Elgato StreamDeck] Disconnected.");
+    SAMMI.alert("[Elgato Stream Deck] Disconnected.");
     SAMMI.alert(
-      `[Elgato StreamDeck] Retrying conection in ${
+      `[Elgato Stream Deck] Retrying conection in ${
         SD_PLUGIN_CONNECTION_INTERVAL / 1000
       }s`
     );
@@ -35,7 +35,7 @@ async function sdPluginConnectToWs() {
   };
 
   window.sdPluginWs.onerror = error => {
-    console.log("[Elgato StreamDeck] Relay Server ERROR:");
+    console.log("[Elgato Stream Deck] Relay Server ERROR:");
     console.error(error);
   };
 
@@ -44,10 +44,10 @@ async function sdPluginConnectToWs() {
     console.log(eventData);
     switch (eventData.event) {
       case "error":
-        SAMMI.alert(`[Elgato Streamdeck] ERR: ${eventData.msg}`);
+        SAMMI.alert(`[Elgato Stream deck] ERR: ${eventData.msg}`);
         break;
       case "pressed":
-        SAMMI.triggerExt("Elgato StreamDeck: Pressed", {
+        SAMMI.triggerExt("Elgato Stream Deck: Pressed", {
           action_id: eventData.actionId,
           title: eventData.title,
           type: eventData.event,
@@ -55,7 +55,7 @@ async function sdPluginConnectToWs() {
         });
         break;
       case "released":
-        SAMMI.triggerExt("Elgato StreamDeck: Released", {
+        SAMMI.triggerExt("Elgato Stream Deck: Released", {
           action_id: eventData.actionId,
           title: eventData.title,
           type: eventData.event,
@@ -80,7 +80,7 @@ function sdPluginCUpdateAction(
 ) {
   if (!actionId) {
     SAMMI.alert(
-      `[Elgato StreamDeck] ERR: No action ID specified in button "${btn}"`
+      `[Elgato Stream Deck] ERR: No action ID specified in button "${btn}"`
     );
     return;
   }
@@ -89,7 +89,7 @@ function sdPluginCUpdateAction(
     verifiedCustomProperties = verifyCustomProperties(customProperties);
     if (verifiedCustomProperties === false) {
       SAMMI.alert(
-        "[Elgato StreamDeck] ERR: Custom Properties JSON was not formatted properly"
+        "[Elgato Stream Deck] ERR: Custom Properties JSON was not formatted properly"
       );
       return;
     }

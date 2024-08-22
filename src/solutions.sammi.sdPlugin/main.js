@@ -591,7 +591,9 @@ async function setIcon(device, actionId, icon, update, source) {
 
 async function setCustomProperties(device, actionId, customProperties, update) {
   logger("requested to set custom properties, recieved params:");
-  logger(`${device},  ${actionId}, ${JSON.stringify(customProperties)}, ${update}`);
+  logger(
+    `${device},  ${actionId}, ${JSON.stringify(customProperties)}, ${update}`
+  );
   if (update) {
     collectionUpdateDeviceAction(device, actionId, {
       customProperties: customProperties,
@@ -665,8 +667,11 @@ async function wait(ms) {
 }
 
 async function parseIcon(icon) {
-  const type = determineImageType(icon);
+  if (icon === "")
+    return await pathToBase64(path.join(__dirname, "img", "main.png"));
+
   let b64Uri = null;
+  const type = determineImageType(icon);
   switch (type) {
     case "url":
       b64Uri = await urlImgToBase64(icon);
