@@ -14,10 +14,13 @@ async function sdPluginConnectToWs() {
   window.sdPluginWs.onopen = () => {
     console.log("[Elgato Stream Deck] Connected!");
     SAMMI.alert("[Elgato Stream Deck] Connected!");
+    elgatostreamdeckStatusLabel.style.color = "green";
+    elgatostreamdeckStatusLabel.textContent = "Connected!";
   };
 
   window.sdPluginWs.onclose = async () => {
-    SAMMI.setVariable("bridge_relay_connected", false, "Sando");
+    elgatostreamdeckStatusLabel.style.color = "red";
+    elgatostreamdeckStatusLabel.textContent = "Disconnected";
     console.log("[Elgato Stream Deck] Disconnected.");
     console.log(
       `[Elgato Stream Deck] Retrying conection in ${

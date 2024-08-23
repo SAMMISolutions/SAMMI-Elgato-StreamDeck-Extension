@@ -4,7 +4,7 @@
 let customPropertiesChanged = false;
 let titleChanged = false;
 let iconChanged = false;
-let backgroundChanged = false;
+// let backgroundChanged = false;
 
 $PI.onConnected(jsn => {
   //$PI.openUrl("https://landie.land");
@@ -33,14 +33,6 @@ $PI.onConnected(jsn => {
       device: device,
       actionId: settings.actionId,
     });
-    // pluginWs.send(
-    //   JSON.stringify({
-    //     event: "freshActionId",
-    //     context: context,
-    //     device: device,
-    //     actionId: settings.actionId
-    //   })
-    // );
   } else {
     console.log("action id exists, should be visible now");
   }
@@ -52,11 +44,11 @@ $PI.onConnected(jsn => {
   document.querySelector('input[name="icon"]').addEventListener("input", () => {
     iconChanged = true;
   });
-  document
-    .querySelector('input[name="background"]')
-    .addEventListener("input", () => {
-      backgroundChanged = true;
-    });
+  // document
+  //   .querySelector('input[name="background"]')
+  //   .addEventListener("input", () => {
+  //     backgroundChanged = true;
+  //   });
   document.querySelector("table").addEventListener("input", e => {
     console.log("table changed");
     customPropertiesChanged = true;
