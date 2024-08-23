@@ -644,7 +644,7 @@ function parseArgs(args) {
 }
 
 function logger(msg) {
-  if (!debug) return;
+  if (!DEBUG) return;
   fs.appendFileSync("output.txt", msg + "\n", "utf-8");
 }
 

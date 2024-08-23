@@ -58,6 +58,9 @@ ${manifest.info}
 [extension_version]
 ${manifest.version}
 
+[extension_verification]
+${manifest.verification}
+
 [insert_external]
 ${external}
 

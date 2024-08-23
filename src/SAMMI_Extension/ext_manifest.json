@@ -1,9 +1,6 @@
 {
   "name": "Elgato Stream Deck",
   "info": "Allows bi-directional communication between SAMMI and the Elgato Stream Deck software",
-  "version": "0.1.0",
-  "deck_config": {
-    "sammi_version":"2024.2.2",
-    "bridge": true
-  }
+  "version": "1.0.0",
+  "verification": "32dab90760b0f65611d090373815bce6a9f85fd9158da66a271a11eeb41bd7ad"
 }
