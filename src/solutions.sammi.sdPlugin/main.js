@@ -7,7 +7,15 @@ const process = require("process");
 const path = require("path");
 const axios = require("axios");
 
+const DEBUG = false; //shows logging
+
 let args = process.argv;
+
+/*
+? example of data passed to the exe when started by elgato stream deck.
+? IMPORTANT: Stream Deck generates a dynamic port to connect to it's websocket,
+? so it is crucial to parse these args correctly.
+*/
 // let args = [
 //   "F:\\Projects\\GitHub Repos\\SAMMI-Elgato-StreamDeck-Extension\\src\\solutions.sammi.sdPlugin\\main.exe",
 //   "C:\\snapshot\\Users\\Landie\\AppData\\Roaming\\Elgato\\StreamDeck\\Plugins\\solutions.sammi.sdPlugin\\main.js",
@@ -25,28 +33,10 @@ const elgatoData = parseArgs(args);
 
 let server = null;
 let wss = null;
-let ws = null;
 let wsElgato = null;
-let debug = true; //shows logging
-// let collection = {
-//   device_27EFDAA54970B08A70ABE5F877AF0961: {
-//     actions: {
-//       ctx_83f85e559e1f9551221e8a2d813e7b1e: {
-//         title: "this is a title",
-//         img: "https://landie.land/pfp.png"
-//       },
-//       ctx_00c3b449d095f03b08c05fdded800943: {
-//         title: "this is another title",
-//         img: "https://landie.land/ref.png"
-//       },
-//     },
-//   },
-// };
 
 let collection = {};
-let collectionQueue = {
-  //id_wudgawd0819d: {title: 'cool title', actionId: "wudgawd0819d"}
-};
+let collectionQueue = {};
 
 const RELAY_PORT = 9880;
 const ERROR_IMG =
@@ -656,14 +646,6 @@ function parseArgs(args) {
 function logger(msg) {
   if (!debug) return;
   fs.appendFileSync("output.txt", msg + "\n", "utf-8");
-}
-
-async function wait(ms) {
-  return new Promise(() => {
-    setTimeout(() => {
-      Promise.resolve();
-    }, ms);
-  });
 }
 
 async function parseIcon(icon) {
