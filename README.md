@@ -1,5 +1,5 @@
 # SAMMI-Elgato-StreamDeck-Extension
-Work in progress elgato streamdeck extension for SAMMI
+Elgato Stream Deck extension & plugin for SAMMI
 
 # Compiling
 - `cd` into the directory that contains this README
