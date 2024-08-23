@@ -21,3 +21,9 @@ To see your changes:
 - run `npm run build` and wait for it to finish
 - Upon build you'll get "compiled.sef" for testing in the SAMMI Bridge, and a "main.exe" gets built, which should be automatically linked properly.
 - Re-open the Stream Deck application.
+
+# Release
+
+Releasing should only contain the "solutions.sammi.streamDeckPlugin" file. the .sef file should be released on itch.io.
+
+The reason for this is because we need a public link to point to when submitting to the marketplace, and it needs to only be the Stream Deck Plugin itself.
